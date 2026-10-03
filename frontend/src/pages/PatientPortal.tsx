@@ -17,6 +17,8 @@ import Reports from '../components/patient/Reports';
 import Reminders from '../components/patient/Reminders';
 import Settings from '../components/patient/Settings';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: <Activity size={20} /> },
   { id: 'profile', label: 'Profile', icon: <User size={20} /> },
@@ -134,19 +136,26 @@ export default function PatientPortal() {
     formData.append("document_type", "prescription");
 
     try {
-      const response = await fetch("http://localhost:8000/api/v1/documents/upload", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/documents/analyze`, {
         method: "POST",
         body: formData,
       });
 
-      if (response.ok) {
-        await response.json();
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail?.detail || `Request failed (${response.status})`);
       }
+
+      const payload = await response.json();
+      setExtractedData(payload.extraction);
+      setUploadState('success');
+      return;
     } catch (error) {
-      console.log("Backend not available, using local AI simulation");
+      // Keep the demo usable when the backend/AI keys aren't configured.
+      console.warn("AI backend unavailable, using local simulation:", error);
     }
 
-    // AI extraction simulation with varied realistic data
+    // Fallback: simulated extraction with varied realistic data
     setTimeout(() => {
       const randomIndex = Math.floor(Math.random() * sampleExtractions.length);
       setExtractedData(sampleExtractions[randomIndex]);

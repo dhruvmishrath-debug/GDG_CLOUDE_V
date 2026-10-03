@@ -1,39 +1,66 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+"""Smoke test / reference for the NVIDIA Nemotron integration.
 
-def run_nemotron_model():
-    print("Loading tokenizer and model...")
-    # Initialize the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(
-        "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8", 
-        trust_remote_code=True
-    )
-    
-    # Initialize the model (Warning: This requires significant VRAM, e.g., multiple A100s)
-    model = AutoModelForCausalLM.from_pretrained(
-        "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8", 
-        trust_remote_code=True, 
-        device_map="auto"
-    )
-    
-    messages = [
-        {"role": "user", "content": "Who are you?"},
-    ]
-    
-    print("Formatting inputs...")
-    inputs = tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-    ).to(model.device)
+Run from the ``backend`` directory:
 
-    print("Generating response...")
-    outputs = model.generate(**inputs, max_new_tokens=40)
-    
-    response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:])
-    print("\nModel Response:")
-    print(response)
+    export NVIDIA_API_KEY=nvapi-...
+    python -m scripts.test_nemotron
+
+This exercises the same client the app uses (streaming + the thinking
+channel), so it doubles as a connectivity check for the AI pipeline.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import sys
+
+# Allow ``python scripts/test_nemotron.py`` as well as ``-m``.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.ai.nemotron import NemotronClient, NemotronError  # noqa: E402
+
+
+PROMPT = "Write a limerick about the wonders of GPU computing."
+
+
+async def main() -> int:
+    client = NemotronClient()
+    if not client.configured:
+        print(
+            "ERROR: NVIDIA_API_KEY is not set.\n"
+            "  export NVIDIA_API_KEY=nvapi-...",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Model: {client.model}")
+    print(f"Endpoint: {client.base_url}")
+    print("-" * 60)
+
+    reasoning_started = False
+    try:
+        async for channel, text in client.stream(
+            [{"role": "user", "content": PROMPT}]
+        ):
+            if channel == "reasoning":
+                if not reasoning_started:
+                    print("\n[thinking] ", end="", flush=True)
+                    reasoning_started = True
+                print(text, end="", flush=True)
+            else:
+                if reasoning_started:
+                    print("\n\n[answer] ", end="", flush=True)
+                    reasoning_started = False
+                print(text, end="", flush=True)
+    except NemotronError as exc:
+        print(f"\nERROR: {exc}", file=sys.stderr)
+        return 1
+
+    print("\n" + "-" * 60)
+    print("OK")
+    return 0
+
 
 if __name__ == "__main__":
-    run_nemotron_model()
+    raise SystemExit(asyncio.run(main()))

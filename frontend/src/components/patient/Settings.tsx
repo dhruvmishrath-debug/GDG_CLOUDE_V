@@ -247,7 +247,7 @@ export default function PatientSettings() {
                     { label: 'Problem Statement', value: 'IS-23 (SIH 2024)' },
                     { label: 'Organization', value: 'MP Online Limited' },
                     { label: 'Tech Stack', value: 'React + FastAPI + PostgreSQL + Redis' },
-                    { label: 'AI Engine', value: 'NVIDIA Nemotron 120B (FP8)' },
+                    { label: 'AI Engine', value: 'NVIDIA Nemotron 3.5 Lightning (30B-A3B)' },
                     { label: 'Storage', value: 'Tamper-evident clinical ledger' },
                     { label: 'Build', value: '2026.09.30 — Production' },
                   ].map((item, i) => (

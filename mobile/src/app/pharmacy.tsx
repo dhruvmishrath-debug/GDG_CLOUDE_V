@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Pill, Activity, ScanLine, ShoppingCart, PackageOpen, Settings, Bell, LogOut, Package, AlertCircle, History, ChevronRight, Search, FileText } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pill, Activity, ScanLine, Settings, Bell, LogOut, Package, History, Search, FileText } from 'lucide-react-native';
+
+import AppHeader from '@/components/app-header';
+import TabBar from '@/components/ui/tab-bar';
+import PharmacyDashboard from '@/components/pharmacy/dashboard';
+import PharmacyHistory from '@/components/pharmacy/history';
+import PharmacySettings from '@/components/pharmacy/settings';
+import { useTabBackHandler } from '@/hooks/use-tab-back';
 
 export default function PharmacyPortal() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('inventory');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useTabBackHandler(activeTab, 'dashboard', setActiveTab);
 
   const renderInventory = () => (
     <>
@@ -68,7 +78,7 @@ export default function PharmacyPortal() {
           <ScanLine size={40} color="#8B5CF6" />
         </View>
         <Text style={styles.scanTitle}>Scan Prescription</Text>
-        <Text style={styles.scanDesc}>Scan the patient's digital or physical prescription to automatically prepare medicines.</Text>
+        <Text style={styles.scanDesc}>Scan the patient&apos;s digital or physical prescription to automatically prepare medicines.</Text>
         <TouchableOpacity style={styles.primaryBtn} onPress={() => Alert.alert('Camera Opened', 'Ready to scan QR or barcode.')}>
           <Text style={styles.primaryBtnTxt}>Open Camera Scanner</Text>
         </TouchableOpacity>
@@ -96,55 +106,54 @@ export default function PharmacyPortal() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.logoBox, { backgroundColor: '#F5F3FF' }]}><Pill size={20} color="#8B5CF6" /></View>
-          <View>
-            <Text style={styles.headerTitle}>CityCare Pharmacy</Text>
-            <Text style={styles.headerSub}>Inventory & Dispensing</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Alerts', 'Low stock alerts available')}><Bell size={20} color="#64748B" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.replace('/')}><LogOut size={20} color="#EF4444" /></TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <AppHeader
+        title="CityCare Pharmacy"
+        subtitle="Inventory & Dispensing"
+        icon={<Pill size={20} color="#8B5CF6" />}
+        iconBackgroundColor="#F5F3FF"
+        actions={[
+          {
+            accessibilityLabel: 'Alerts',
+            icon: <Bell size={20} color="#64748B" />,
+            onPress: () => Alert.alert('Alerts', 'Low stock alerts available'),
+          },
+          {
+            accessibilityLabel: 'Log out',
+            icon: <LogOut size={20} color="#EF4444" />,
+            onPress: () => router.replace('/'),
+          },
+        ]}
+      />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {activeTab === 'dashboard' && (
+          <PharmacyDashboard onScan={() => setActiveTab('dispense')} onViewInventory={() => setActiveTab('inventory')} />
+        )}
         {activeTab === 'inventory' && renderInventory()}
         {activeTab === 'dispense' && renderDispense()}
-        <View style={{ height: 100 }} />
+        {activeTab === 'history' && <PharmacyHistory />}
+        {activeTab === 'settings' && <PharmacySettings onLogout={() => router.replace('/')} />}
+        <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* Bottom Tabs */}
-      <View style={styles.tabBar}>
-        {[
-          { id: 'inventory', icon: <Package size={24} color={activeTab === 'inventory' ? '#8B5CF6' : '#94A3B8'} />, label: 'Inventory' },
-          { id: 'dispense', icon: <ShoppingCart size={24} color={activeTab === 'dispense' ? '#8B5CF6' : '#94A3B8'} />, label: 'Dispense' },
-          { id: 'history', icon: <History size={24} color={activeTab === 'history' ? '#8B5CF6' : '#94A3B8'} />, label: 'History' },
-          { id: 'settings', icon: <Settings size={24} color={activeTab === 'settings' ? '#8B5CF6' : '#94A3B8'} />, label: 'Settings' },
-        ].map(tab => (
-          <TouchableOpacity key={tab.id} style={styles.tabItem} onPress={() => { if(tab.id==='history' || tab.id==='settings') Alert.alert(tab.label, 'Feature coming soon'); else setActiveTab(tab.id); }}>
-            {tab.icon}
-            <Text style={[styles.tabLabel, activeTab === tab.id && { color: '#8B5CF6' }]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TabBar
+        activeId={activeTab}
+        onSelect={setActiveTab}
+        activeColor="#8B5CF6"
+        tabs={[
+          { id: 'dashboard', label: 'Dashboard', renderIcon: (a) => <Activity size={24} color={a ? '#8B5CF6' : '#94A3B8'} /> },
+          { id: 'inventory', label: 'Inventory', renderIcon: (a) => <Package size={24} color={a ? '#8B5CF6' : '#94A3B8'} /> },
+          { id: 'history', label: 'History', renderIcon: (a) => <History size={24} color={a ? '#8B5CF6' : '#94A3B8'} /> },
+          { id: 'settings', label: 'Settings', renderIcon: (a) => <Settings size={24} color={a ? '#8B5CF6' : '#94A3B8'} /> },
+        ]}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  headerRight: { flexDirection: 'row', gap: 12 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  
   content: { padding: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1E293B', marginBottom: 16, marginTop: 8 },
 
@@ -178,8 +187,4 @@ const styles = StyleSheet.create({
   rxIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   rxPatient: { fontSize: 15, fontWeight: '600', color: '#1E293B', marginBottom: 2 },
   rxId: { fontSize: 12, color: '#64748B' },
-
-  tabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingBottom: 20, paddingTop: 12 },
-  tabItem: { alignItems: 'center', gap: 4 },
-  tabLabel: { fontSize: 11, fontWeight: '500', color: '#94A3B8' },
 });

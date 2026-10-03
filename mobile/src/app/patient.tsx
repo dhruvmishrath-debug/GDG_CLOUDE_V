@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, ActivityIndicator, SafeAreaView, TextInput, Alert, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, Modal, ActivityIndicator, TextInput, Alert, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, User, HeartPulse, Upload, FileText, Calendar, Clock, Activity, FilePlus2, FlaskConical, Pill, AlertTriangle, ChevronRight, Phone, Mail, MapPin, Search, LogOut, Heart, Shield, Bot, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 

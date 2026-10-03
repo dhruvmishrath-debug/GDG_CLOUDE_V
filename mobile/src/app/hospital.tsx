@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Building2, Users, FileText, Activity, Bell, LogOut, ChevronRight, UserPlus, FilePlus, Settings, Search, Clock, ShieldCheck, HeartPulse, User } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Building2, Users, FileText, Activity, Bell, LogOut, UserPlus, FilePlus, Settings, Search, Clock, ShieldCheck, User } from 'lucide-react-native';
+
+import AppHeader from '@/components/app-header';
+import TabBar from '@/components/ui/tab-bar';
+import MedicalRecords from '@/components/hospital/records';
+import HospitalSettings from '@/components/hospital/settings';
+import { useTabBackHandler } from '@/hooks/use-tab-back';
 
 export default function HospitalPortal() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useTabBackHandler(activeTab, 'dashboard', setActiveTab);
 
   const renderDashboard = () => (
     <>
@@ -122,55 +131,51 @@ export default function HospitalPortal() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.logoBox, { backgroundColor: '#F3E8FF' }]}><Building2 size={20} color="#9333EA" /></View>
-          <View>
-            <Text style={styles.headerTitle}>CityCare Hospital</Text>
-            <Text style={styles.headerSub}>Admin Portal</Text>
-          </View>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Notifications', 'No new notifications')}><Bell size={20} color="#64748B" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.replace('/')}><LogOut size={20} color="#EF4444" /></TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+      <AppHeader
+        title="CityCare Hospital"
+        subtitle="Admin Portal"
+        icon={<Building2 size={20} color="#9333EA" />}
+        iconBackgroundColor="#F3E8FF"
+        actions={[
+          {
+            accessibilityLabel: 'Notifications',
+            icon: <Bell size={20} color="#64748B" />,
+            onPress: () => Alert.alert('Notifications', 'No new notifications'),
+          },
+          {
+            accessibilityLabel: 'Log out',
+            icon: <LogOut size={20} color="#EF4444" />,
+            onPress: () => router.replace('/'),
+          },
+        ]}
+      />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'patients' && renderPatients()}
-        <View style={{ height: 100 }} />
+        {activeTab === 'records' && <MedicalRecords />}
+        {activeTab === 'settings' && <HospitalSettings onLogout={() => router.replace('/')} />}
+        <View style={{ height: 24 }} />
       </ScrollView>
 
-      {/* Bottom Tabs */}
-      <View style={styles.tabBar}>
-        {[
-          { id: 'dashboard', icon: <Activity size={24} color={activeTab === 'dashboard' ? '#9333EA' : '#94A3B8'} />, label: 'Dashboard' },
-          { id: 'patients', icon: <Users size={24} color={activeTab === 'patients' ? '#9333EA' : '#94A3B8'} />, label: 'Patients' },
-          { id: 'records', icon: <FileText size={24} color={activeTab === 'records' ? '#9333EA' : '#94A3B8'} />, label: 'Records' },
-          { id: 'settings', icon: <Settings size={24} color={activeTab === 'settings' ? '#9333EA' : '#94A3B8'} />, label: 'Settings' },
-        ].map(tab => (
-          <TouchableOpacity key={tab.id} style={styles.tabItem} onPress={() => { if(tab.id==='records' || tab.id==='settings') Alert.alert(tab.label, 'Feature coming soon'); else setActiveTab(tab.id); }}>
-            {tab.icon}
-            <Text style={[styles.tabLabel, activeTab === tab.id && { color: '#9333EA' }]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TabBar
+        activeId={activeTab}
+        onSelect={setActiveTab}
+        activeColor="#9333EA"
+        tabs={[
+          { id: 'dashboard', label: 'Dashboard', renderIcon: (a) => <Activity size={24} color={a ? '#9333EA' : '#94A3B8'} /> },
+          { id: 'patients', label: 'Patients', renderIcon: (a) => <Users size={24} color={a ? '#9333EA' : '#94A3B8'} /> },
+          { id: 'records', label: 'Records', renderIcon: (a) => <FileText size={24} color={a ? '#9333EA' : '#94A3B8'} /> },
+          { id: 'settings', label: 'Settings', renderIcon: (a) => <Settings size={24} color={a ? '#9333EA' : '#94A3B8'} /> },
+        ]}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
-  headerSub: { fontSize: 13, color: '#64748B' },
-  headerRight: { flexDirection: 'row', gap: 12 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
-  
   content: { padding: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1E293B', marginBottom: 16, marginTop: 8 },
 
@@ -208,8 +213,4 @@ const styles = StyleSheet.create({
   patientBadgeTxt: { fontSize: 11, fontWeight: '600' },
   patientMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
   patientMetaTxt: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-
-  tabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingBottom: 20, paddingTop: 12 },
-  tabItem: { alignItems: 'center', gap: 4 },
-  tabLabel: { fontSize: 11, fontWeight: '500', color: '#94A3B8' },
 });

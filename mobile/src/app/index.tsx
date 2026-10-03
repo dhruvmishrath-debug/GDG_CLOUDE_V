@@ -1,25 +1,71 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Activity, Mail, Lock, ArrowRight, Building2, Pill, User } from 'lucide-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import GoogleLogo from '@/components/google-logo';
+import { configureGoogleSignIn, signInWithGoogle } from '@/services/google-auth';
+
 SplashScreen.hideAsync();
+
+/** Maps any authenticated email to a portal. */
+const portalForEmail = (userEmail: string): '/hospital' | '/pharmacy' | '/patient' | null => {
+  const e = userEmail.toLowerCase();
+  if (e === 'dhruvmishrath@gmail.com' || e === 'hodpital@health.ai') return '/hospital';
+  if (e === 'dhruvmishrata@gmail.com' || e === 'medical@health.ai') return '/pharmacy';
+  if (e === 'dhruvmishrats@gmail.com' || e === 'patient@health.ai') return '/patient';
+  return null;
+};
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
+
   const routeByEmail = (userEmail: string) => {
-    if (userEmail === 'dhruvmishrath@gmail.com' || userEmail === 'hodpital@health.ai') {
-      router.replace('/hospital');
-    } else if (userEmail === 'dhruvmishrata@gmail.com' || userEmail === 'medical@health.ai') {
-      router.replace('/pharmacy');
-    } else if (userEmail === 'dhruvmishrats@gmail.com' || userEmail === 'patient@health.ai') {
-      router.replace('/patient');
+    const portal = portalForEmail(userEmail);
+    if (portal) {
+      router.replace(portal);
     } else {
       Alert.alert('Error', `Email not recognized: ${userEmail}`);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+
+      if (result.status === 'success') {
+        const portal = portalForEmail(result.profile.email);
+        if (portal) {
+          router.replace(portal);
+        } else {
+          Alert.alert(
+            'Account not linked',
+            `${result.profile.email} isn't linked to a portal yet. Use a registered account or continue with email.`
+          );
+        }
+        return;
+      }
+
+      if (result.status === 'cancelled') return;
+
+      if (result.status === 'unavailable') {
+        Alert.alert('Google Sign-In unavailable', result.reason);
+        return;
+      }
+
+      Alert.alert('Google Sign-In failed', result.message);
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -62,7 +108,32 @@ export default function LoginScreen() {
         {/* Form */}
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Welcome Back</Text>
-          <Text style={styles.formSub}>Enter your credentials to access your portal</Text>
+          <Text style={styles.formSub}>Sign in to access your portal</Text>
+
+          {/* Google Sign-In */}
+          <TouchableOpacity
+            style={styles.googleBtn}
+            onPress={handleGoogleLogin}
+            activeOpacity={0.8}
+            disabled={googleLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#1E293B" />
+            ) : (
+              <>
+                <GoogleLogo size={20} />
+                <Text style={styles.googleBtnText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with email</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
           <View style={styles.inputGroup}>
             <Mail size={18} color="#94A3B8" style={styles.inputIcon} />
@@ -132,6 +203,13 @@ const styles = StyleSheet.create({
   formCard: { backgroundColor: '#fff', borderRadius: 20, padding: 24, marginBottom: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 },
   formTitle: { fontSize: 22, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
   formSub: { fontSize: 14, color: '#64748B', marginBottom: 24 },
+
+  googleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E2E8F0', paddingVertical: 14, borderRadius: 14, minHeight: 52 },
+  googleBtnText: { fontSize: 15, fontWeight: '600', color: '#1E293B' },
+
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 18 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
+  dividerText: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
 
   inputGroup: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 14, marginBottom: 14 },
   inputIcon: { marginRight: 10 },
